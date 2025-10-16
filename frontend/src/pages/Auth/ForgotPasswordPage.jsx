@@ -2,7 +2,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 // Assuming the path to the component
-import ForgetPasswordForm from '../components/ForgetPasswordForm'; 
+import ForgetPasswordForm from './components/ForgotPasswordForm'; 
 
 function ForgetPasswordPage() {
   return (
