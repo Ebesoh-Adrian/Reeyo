@@ -1,5 +1,5 @@
 // src/components/layout/Sidebar.jsx
-import React, { useState } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
@@ -13,28 +13,28 @@ import {
   Megaphone, 
   ChevronDown, 
   X,
-  Package 
+  Sparkles
 } from 'lucide-react';
 
-// Navigation Data
+// Navigation Data - Abbreviated for better UX
 const sidebarNav = [
   { title: 'Dashboard', icon: LayoutDashboard, path: '/' },
-  { title: 'Order Management', icon: FileText, path: '/orders' },
+  { title: 'Orders', icon: FileText, path: '/orders' },
   {
-    title: 'User Management',
+    title: 'Users',
     icon: Users,
     path: '/users',
     children: [
       { title: 'Customers', path: '/users/customers' },
-      { title: 'Delivery Guys', path: '/users/delivery-guys' },
+      { title: 'Riders', path: '/users/delivery-guys' },
     ],
   },
   {
-    title: 'Vendor Management',
+    title: 'Vendors',
     icon: Utensils,
     path: '/vendors',
     children: [
-      { title: 'Vendor List', path: '/users/vendors' },
+      { title: 'All Vendors', path: '/users/vendors' },
       { title: 'Menu Approvals', path: '/vendors/approvals' },
     ],
   },
@@ -43,73 +43,113 @@ const sidebarNav = [
     icon: Bike,
     path: '/logistics',
     children: [
-      { title: 'Rider Live Tracker', path: '/logistics/live' },
-      { title: 'Delivery Zone Setup', path: '/logistics/zones' },
+      { title: 'Live Tracker', path: '/logistics/live' },
+      { title: 'Delivery Zones', path: '/logistics/zones' },
     ]
   },
-  { title: 'Platform Finance', icon: DollarSign, path: '/finance' },
-  { title: 'System Announcements', icon: Megaphone, path: '/announcements' },
-  { title: 'System Settings', icon: Settings, path: '/settings' },
+  { title: 'Finance', icon: DollarSign, path: '/finance' },
+  { title: 'Announcements', icon: Megaphone, path: '/announcements' },
+  { title: 'Settings', icon: Settings, path: '/settings' },
 ];
 
-// NavItem Component
-function NavItem({ item }) {
+// Enhanced NavItem Component with professional animations
+function NavItem({ item, onNavigate }) {
   const [isOpen, setIsOpen] = useState(false);
   const location = useLocation();
   const hasChildren = item.children && item.children.length > 0;
   
-  const linkBaseClasses = `w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200`;
-  const activeClasses = `bg-orange-500 text-white shadow-lg`;
+  const linkBaseClasses = `w-full flex items-center gap-3 px-4 py-2.5 rounded-lg transition-all duration-200 group relative`;
+  const activeClasses = `bg-gradient-to-r from-orange-500 to-orange-600 text-white shadow-lg shadow-orange-500/30`;
   const inactiveClasses = `text-gray-300 hover:bg-white/10 hover:text-white`;
 
-  const isParentActive = hasChildren && item.children.some(child => location.pathname.startsWith(child.path));
+  // Check if any child is active
+  const isParentActive = hasChildren && item.children.some(child => 
+    location.pathname === child.path || location.pathname.startsWith(child.path + '/')
+  );
+
+  const toggleDropdown = useCallback(() => {
+    setIsOpen(prev => !prev);
+  }, []);
+
+  // Auto-expand parent when child is active
+  useEffect(() => {
+    if (isParentActive && !isOpen) {
+      setIsOpen(true);
+    }
+  }, [isParentActive, isOpen]);
 
   if (hasChildren) {
     return (
       <div className="space-y-1">
         <motion.button
-          onClick={() => setIsOpen(!isOpen)}
+          onClick={toggleDropdown}
           className={`${linkBaseClasses} justify-between ${isParentActive ? activeClasses : inactiveClasses}`}
-          whileHover={{ scale: 1.02 }}
+          whileHover={{ x: 4 }}
           whileTap={{ scale: 0.98 }}
         >
           <span className="flex items-center gap-3">
-            <item.icon size={20} />
-            <span className="font-medium">{item.title}</span>
+            <item.icon size={20} strokeWidth={2.5} />
+            <span className="font-medium text-sm">{item.title}</span>
           </span>
           <motion.div
             initial={false}
-            animate={{ rotate: isOpen || isParentActive ? 180 : 0 }}
-            transition={{ duration: 0.3 }}
+            animate={{ rotate: isOpen ? 180 : 0 }}
+            transition={{ duration: 0.3, ease: "easeInOut" }}
           >
-            <ChevronDown size={18} />
+            <ChevronDown size={16} />
           </motion.div>
         </motion.button>
 
-        <AnimatePresence>
-          {(isOpen || isParentActive) && (
+        <AnimatePresence initial={false}>
+          {isOpen && (
             <motion.div
               initial={{ height: 0, opacity: 0 }}
-              animate={{ height: 'auto', opacity: 1 }}
-              exit={{ height: 0, opacity: 0 }}
-              transition={{ duration: 0.3 }}
-              className="pl-6 space-y-1 overflow-hidden"
+              animate={{ 
+                height: 'auto', 
+                opacity: 1,
+                transition: {
+                  height: { duration: 0.3, ease: "easeInOut" },
+                  opacity: { duration: 0.2, delay: 0.1 }
+                }
+              }}
+              exit={{ 
+                height: 0, 
+                opacity: 0,
+                transition: {
+                  height: { duration: 0.3, ease: "easeInOut" },
+                  opacity: { duration: 0.15 }
+                }
+              }}
+              className="overflow-hidden"
             >
-              {item.children.map((child) => (
-                <NavLink 
-                  key={child.path} 
-                  to={child.path} 
-                  className={({ isActive }) => 
-                    `flex items-center py-2 px-3 text-sm rounded-lg transition-colors ${
-                      isActive 
-                        ? 'bg-orange-600 text-white font-medium' 
-                        : 'text-gray-300 hover:bg-white/10'
-                    }`
-                  }
-                >
-                  <span className="ml-3">{child.title}</span>
-                </NavLink>
-              ))}
+              <div className="pl-4 pr-2 py-1 space-y-0.5 border-l-2 border-orange-500/30 ml-4">
+                {item.children.map((child, idx) => (
+                  <motion.div
+                    key={child.path}
+                    initial={{ x: -10, opacity: 0 }}
+                    animate={{ 
+                      x: 0, 
+                      opacity: 1,
+                      transition: { delay: idx * 0.05 }
+                    }}
+                    exit={{ x: -10, opacity: 0 }}
+                  >
+                    <NavLink 
+                      to={child.path} 
+                      onClick={onNavigate}
+                      className={({ isActive }) => 
+                        `flex items-center py-2 px-3 text-sm rounded-lg transition-all duration-200 ${
+                          isActive 
+                            ? 'bg-orange-500/20 text-orange-400 font-semibold border-l-2 border-orange-500' 
+                            : 'text-gray-400 hover:bg-white/5 hover:text-gray-200'
+                        }`
+                      }
+                    >
+                      <span className="truncate">{child.title}</span>
+                    </NavLink>
+                  </motion.div>
+                ))}
+              </div>
             </motion.div>
           )}
         </AnimatePresence>
@@ -119,14 +159,27 @@ function NavItem({ item }) {
 
   return (
     <NavLink 
-      to={item.path} 
+      to={item.path}
+      onClick={onNavigate}
       className={({ isActive }) => `${linkBaseClasses} ${isActive ? activeClasses : inactiveClasses}`}
       end={item.path === '/'}
     >
-      <item.icon size={20} />
-      <span className="font-medium">{item.title}</span>
-      {location.pathname === item.path && (
-        <span className="ml-auto w-2 h-2 bg-white rounded-full" />
+      {({ isActive }) => (
+        <>
+          <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
+            <item.icon size={20} strokeWidth={2.5} />
+          </motion.div>
+          <span className="font-medium text-sm truncate">{item.title}</span>
+          {isActive && (
+            <motion.span 
+              layoutId="activeIndicator"
+              className="ml-auto w-1.5 h-1.5 bg-white rounded-full"
+              initial={{ scale: 0 }}
+              animate={{ scale: 1 }}
+              transition={{ type: "spring", stiffness: 500, damping: 30 }}
+            />
+          )}
+        </>
       )}
     </NavLink>
   );
@@ -134,74 +187,142 @@ function NavItem({ item }) {
 
 // Main Sidebar Component
 function Sidebar({ isMobileOpen, setIsMobileOpen }) {
+  const handleNavigation = useCallback(() => {
+    // Auto-close mobile menu on navigation
+    if (window.innerWidth < 1024) {
+      setIsMobileOpen(false);
+    }
+  }, [setIsMobileOpen]);
+
   return (
     <>
-      {/* Mobile Backdrop Overlay - Only show on mobile when open */}
-      {isMobileOpen && (
-        <div 
-          className="fixed inset-0 bg-black/50 z-30 lg:hidden" 
-          onClick={() => setIsMobileOpen(false)}
-        />
-      )}
+      {/* Mobile Backdrop Overlay with smooth fade */}
+      <AnimatePresence>
+        {isMobileOpen && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-30 lg:hidden" 
+            onClick={() => setIsMobileOpen(false)}
+          />
+        )}
+      </AnimatePresence>
 
       {/* Sidebar Content */}
       <aside
         className={`
           fixed inset-y-0 left-0 
           w-64 z-40 
-          bg-[#004B6E]
+          bg-gradient-to-b from-[#004B6E] to-[#003850]
           text-white h-full 
           flex flex-col
-          shadow-2xl shadow-black/50
+          shadow-2xl
           transform transition-transform duration-300 ease-in-out
-          
           ${isMobileOpen ? 'translate-x-0' : '-translate-x-full'}
           lg:translate-x-0
         `}
       >
         {/* Logo/Header Section */}
-        <div className="p-6 flex items-center justify-between flex-shrink-0 border-b border-white/10">
-          <h1 className="text-3xl font-extrabold text-white">Reeyo</h1>
-          <button 
-            className="lg:hidden p-1 rounded-lg hover:bg-white/10" 
+        <div className="p-5 flex items-center justify-between flex-shrink-0 border-b border-white/10">
+          <motion.h1 
+            className="text-2xl font-bold bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent"
+            whileHover={{ scale: 1.05 }}
+          >
+            Reeyo
+          </motion.h1>
+          <motion.button 
+            whileHover={{ scale: 1.1, rotate: 90 }}
+            whileTap={{ scale: 0.9 }}
+            className="lg:hidden p-1.5 rounded-lg hover:bg-white/10 transition-colors" 
             onClick={() => setIsMobileOpen(false)}
           >
-            <X className="w-6 h-6" />
-          </button>
+            <X className="w-5 h-5" />
+          </motion.button>
         </div>
 
-        {/* Navigation Section */}
-        <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
+        {/* Navigation Section - Scrollable */}
+        <nav className="flex-1 p-3 space-y-0.5 overflow-y-auto scrollbar-thin scrollbar-thumb-white/20 scrollbar-track-transparent">
           {sidebarNav.map((item, index) => (
-            <NavItem key={index} item={item} />
+            <motion.div
+              key={index}
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: index * 0.05 }}
+            >
+              <NavItem item={item} onNavigate={handleNavigation} />
+            </motion.div>
           ))}
         </nav>
 
-        {/* Footer Section */}
-        <div className="p-4 border-t border-white/10 flex-shrink-0">
-          <div className="text-xs text-gray-300">
-            <p className="font-semibold">Reeyo Food Delivery</p>
-            <p className="mt-1">Admin Panel v1.0 | {new Date().getFullYear()}</p>
+        {/* Compact Footer Section */}
+        <div className="p-3 border-t border-white/10 flex-shrink-0 space-y-2">
+          {/* Version Info - Minimized */}
+          <div className="text-[10px] text-gray-400 px-2">
+            <p className="font-semibold text-gray-300">Reeyo Delivery</p>
+            <p>Admin v1.0 • {new Date().getFullYear()}</p>
           </div>
           
-          {/* Promo Card */}
+          {/* Compact Promo Card with Gradient Animation */}
           <motion.div
             initial={{ scale: 1 }}
-            whileHover={{ scale: 1.05 }}
-            className="mt-4 p-4 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl cursor-pointer"
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            className="p-3 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-lg cursor-pointer relative overflow-hidden group"
           >
-            <p className="text-sm font-semibold text-white">Improve Your Sales Efficiency</p>
-            <p className="text-xs text-blue-100 mt-1">
-              Check out new AI tools for logistics.
-            </p>
-            <button className="mt-3 bg-white text-blue-600 text-xs font-bold px-4 py-2 rounded-full hover:bg-gray-100 transition-colors">
-              Start Now →
-            </button>
+            {/* Animated shimmer effect */}
+            <motion.div 
+              className="absolute inset-0 bg-white/0 group-hover:bg-white/10 transition-colors"
+              animate={{
+                background: [
+                  'radial-gradient(circle at 0% 0%, rgba(255,255,255,0.1) 0%, transparent 50%)',
+                  'radial-gradient(circle at 100% 100%, rgba(255,255,255,0.1) 0%, transparent 50%)',
+                  'radial-gradient(circle at 0% 0%, rgba(255,255,255,0.1) 0%, transparent 50%)',
+                ]
+              }}
+              transition={{ duration: 3, repeat: Infinity }}
+            />
+            
+            <div className="relative">
+              <div className="flex items-start gap-2">
+                <Sparkles size={16} className="text-yellow-300 flex-shrink-0 mt-0.5" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-bold text-white leading-tight">
+                    Boost Sales
+                  </p>
+                  <p className="text-[10px] text-blue-100 mt-0.5 leading-snug">
+                    Try AI logistics tools
+                  </p>
+                </div>
+              </div>
+              <button className="mt-2 w-full bg-white text-blue-600 text-[10px] font-bold px-3 py-1.5 rounded-md hover:bg-gray-100 transition-all hover:shadow-md">
+                Explore →
+              </button>
+            </div>
           </motion.div>
         </div>
       </aside>
+
+      {/* Custom scrollbar styles */}
+      <style>{`
+        .scrollbar-thin::-webkit-scrollbar {
+          width: 4px;
+        }
+        .scrollbar-thin::-webkit-scrollbar-track {
+          background: transparent;
+        }
+        .scrollbar-thin::-webkit-scrollbar-thumb {
+          background: rgba(255, 255, 255, 0.2);
+          border-radius: 2px;
+        }
+        .scrollbar-thin::-webkit-scrollbar-thumb:hover {
+          background: rgba(255, 255, 255, 0.3);
+        }
+      `}</style>
     </>
   );
 }
 
 export default Sidebar;
+
